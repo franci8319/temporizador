@@ -897,7 +897,7 @@ function closeSheet() {
 
 // ── EVENTS ──
 
-$('sheet-overlay').addEventListener('click', closeSheet);
+$('sheet-overlay').addEventListener('click', () => { closeSheet(); closeCustomSheet(); });
 
 $('sheet-items').addEventListener('click', e => {
   const btn = e.target.closest('.fi-btn');
