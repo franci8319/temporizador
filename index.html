@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Temporizador de Cocina</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#110d07" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Cocina" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #110d07;
+      --surface:  #1e1610;
+      --surface2: #2e2218;
+      --surface3: #3e3020;
+      --accent:   #ff7043;
+      --accent2:  #ffa000;
+      --text:     #f5ede0;
+      --sub:      rgba(245,237,224,0.5);
+      --r:        16px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    #app {
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    #header {
+      flex-shrink: 0;
+      padding: 18px 20px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #header svg { width: 28px; height: 28px; flex-shrink: 0; }
+
+    #header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    /* ── Active timers ── */
+    #timers-section {
+      flex-shrink: 0;
+      padding: 0 16px 8px;
+      display: none;
+    }
+
+    #timers-section.visible { display: block; }
+
+    #timers-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--sub);
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+
+    #timers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .timer-card {
+      background: var(--surface);
+      border-radius: var(--r);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-left: 3px solid var(--accent);
+      transition: opacity 0.3s;
+    }
+
+    .timer-card.done {
+      border-left-color: #4caf50;
+      animation: pulse-green 0.6s ease 3;
+    }
+
+    @keyframes pulse-green {
+      0%, 100% { background: var(--surface); }
+      50%       { background: #1a3020; }
+    }
+
+    /* Circular progress */
+    .tc-ring {
+      position: relative;
+      width: 52px;
+      height: 52px;
+      flex-shrink: 0;
+    }
+
+    .tc-ring svg {
+      width: 52px;
+      height: 52px;
+      transform: rotate(-90deg);
+    }
+
+    .tc-bg {
+      fill: none;
+      stroke: var(--surface3);
+      stroke-width: 4;
+    }
+
+    .tc-progress {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-dasharray: 125.66;
+      transition: stroke-dashoffset 0.5s linear, stroke 0.3s;
+    }
+
+    .timer-card.done .tc-progress { stroke: #4caf50; }
+
+    .tc-time {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+    }
+
+    .tc-info { flex: 1; min-width: 0; }
+
+    .tc-name {
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tc-desc {
+      font-size: 11px;
+      color: var(--sub);
+      margin-top: 2px;
+    }
+
+    .tc-cancel {
+      background: var(--surface2);
+      border: none;
+      color: var(--sub);
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .tc-cancel:hover { background: var(--surface3); color: var(--accent); }
+
+    /* ── Categories ── */
+    #categories-section {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 0 16px 24px;
+    }
+
+    #categories-section::-webkit-scrollbar { width: 3px; }
+    #categories-section::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+    #cat-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--sub);
+      margin-bottom: 12px;
+      padding: 0 4px;
+    }
+
+    #cat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px 12px;
+      justify-items: center;
+    }
+
+    .cat-card {
+      border: none;
+      background: none;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.15s, opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      width: 100%;
+    }
+
+    .cat-card:active { transform: scale(0.91); opacity: 0.8; }
+
+    .cat-icon-wrap {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+
+    .cat-emoji { font-size: 48px; line-height: 1; }
+
+    .cat-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    .cat-note { display: none; }
+    .cat-count { display: none; }
+
+    /* ── Bottom Sheet ── */
+    #sheet-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 50;
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
+    }
+
+    #sheet-overlay.open { display: block; }
+
+    #sheet {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-radius: 24px 24px 0 0;
+      max-height: 75dvh;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+      z-index: 51;
+    }
+
+    #sheet.open { transform: translateY(0); }
+
+    #sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--surface3);
+      border-radius: 2px;
+      margin: 12px auto 0;
+      flex-shrink: 0;
+    }
+
+    #sheet-header {
+      flex-shrink: 0;
+      padding: 16px 20px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--surface2);
+    }
+
+    #sheet-emoji { font-size: 32px; }
+
+    #sheet-title-wrap {}
+    #sheet-title { font-size: 18px; font-weight: 800; }
+    #sheet-note  { font-size: 12px; color: var(--sub); margin-top: 2px; }
+
+    #sheet-items {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 8px 16px 32px;
+    }
+
+    #sheet-items::-webkit-scrollbar { width: 3px; }
+    #sheet-items::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+    .food-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 4px;
+      border-bottom: 1px solid var(--surface2);
+      gap: 12px;
+      min-height: 72px;
+    }
+
+    .food-item:last-child { border-bottom: none; }
+
+    .fi-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .fi-emoji { font-size: 30px; flex-shrink: 0; }
+
+    .fi-meta { min-width: 0; }
+
+    .fi-name {
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .fi-desc {
+      font-size: 11px;
+      color: var(--sub);
+      margin-top: 2px;
+    }
+
+    .fi-times {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .fi-btn {
+      background: var(--surface2);
+      border: 1.5px solid var(--surface3);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+      min-width: 58px;
+      text-align: center;
+    }
+
+    .fi-btn:hover  { background: var(--surface3); border-color: var(--accent); }
+    .fi-btn:active { transform: scale(0.92); background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 80px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface3);
+      color: var(--text);
+      padding: 10px 18px;
+      border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+      z-index: 200;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      animation: fadeUp 0.2s ease;
+      white-space: nowrap;
+    }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateX(-50%) translateY(8px); }
+      to   { opacity:1; transform:translateX(-50%) translateY(0); }
+    }
+
+    /* ── Tip section ── */
+    #tip-box {
+      flex-shrink: 0;
+      margin: 0 16px 12px;
+      background: var(--surface);
+      border-radius: var(--r);
+      padding: 12px 14px;
+      border-left: 3px solid var(--accent2);
+    }
+
+    #tip-box p {
+      font-size: 12px;
+      color: var(--sub);
+      line-height: 1.5;
+    }
+
+    #tip-box strong { color: var(--accent2); }
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- Header -->
+  <div id="header">
+    <svg viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="13" r="8" stroke="#ff7043" stroke-width="2"/>
+      <path d="M12 9v4l2.5 2.5" stroke="#ff7043" stroke-width="2" stroke-linecap="round"/>
+      <path d="M9 3h6M12 3v2" stroke="#ffa000" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <h1>Temporizador</h1>
+  </div>
+
+  <!-- Active timers -->
+  <div id="timers-section">
+    <div id="timers-label">En marcha</div>
+    <div id="timers-list"></div>
+  </div>
+
+  <!-- Categories -->
+  <div id="categories-section">
+    <div id="cat-label">¿Qué estás cocinando?</div>
+    <div id="cat-grid"></div>
+  </div>
+
+  <!-- Tip -->
+  <div id="tip-box">
+    <p><strong>Recuerda:</strong> el tiempo empieza cuando el agua vuelve a hervir tras echar el alimento. Para las verduras, un choque térmico con agua fría corta la cocción y mantiene el color.</p>
+  </div>
+
+</div>
+
+<!-- Sheet overlay -->
+<div id="sheet-overlay"></div>
+<div id="sheet">
+  <div id="sheet-handle"></div>
+  <div id="sheet-header">
+    <span id="sheet-emoji"></span>
+    <div id="sheet-title-wrap">
+      <div id="sheet-title"></div>
+      <div id="sheet-note"></div>
+    </div>
+  </div>
+  <div id="sheet-items"></div>
+</div>
+
+<script>
+// ── DATA ──
+const FOODS = [
+  {
+    id: 'eggs', emoji: '🥚', name: 'Huevos',
+    note: 'desde que el agua hierve',
+    bg: 'linear-gradient(135deg, #f59e0b, #b45309)',
+    items: [
+      { name: 'Pasado por agua', emoji: '💧', min: 4,  max: 5,  desc: 'clara cuajada, yema líquida' },
+      { name: 'Mollet',          emoji: '🌕', min: 6,  max: 7,  desc: 'clara firme, yema cremosa' },
+      { name: 'Duro',            emoji: '⚪', min: 10, max: 12, desc: 'clara y yema completamente firmes' },
+    ]
+  },
+  {
+    id: 'rice', emoji: '🍚', name: 'Arroces y cereales',
+    note: 'cuando el agua vuelve a hervir',
+    bg: 'linear-gradient(135deg, #84cc16, #3f6212)',
+    items: [
+      { name: 'Arroz blanco',  emoji: '⚪', min: 15, max: 18, desc: '+5 min de reposo tapado' },
+      { name: 'Arroz integral',emoji: '🟤', min: 40, max: 45, desc: '' },
+      { name: 'Arroz basmati', emoji: '🌾', min: 10, max: 12, desc: '' },
+      { name: 'Quinoa',        emoji: '🌿', min: 12, max: 15, desc: '' },
+      { name: 'Cuscús',        emoji: '🫙', min: 5,  max: 5,  desc: 'fuera del fuego, tapar' },
+    ]
+  },
+  {
+    id: 'pasta', emoji: '🍝', name: 'Pasta',
+    note: 'cuando el agua vuelve a hervir',
+    bg: 'linear-gradient(135deg, #eab308, #854d0e)',
+    items: [
+      { name: 'Pasta seca',   emoji: '🍝', min: 8, max: 10, desc: 'macarrones, espaguetis — al dente' },
+      { name: 'Pasta fresca', emoji: '🫙', min: 2, max: 4,  desc: '' },
+    ]
+  },
+  {
+    id: 'veg', emoji: '🥦', name: 'Verduras',
+    note: 'al vapor o hervidas',
+    bg: 'linear-gradient(135deg, #22c55e, #14532d)',
+    items: [
+      { name: 'Brócoli / coliflor', emoji: '🥦', min: 5,  max: 7,  desc: '' },
+      { name: 'Patatas enteras',    emoji: '🥔', min: 20, max: 25, desc: 'medianas' },
+      { name: 'Zanahoria',          emoji: '🥕', min: 8,  max: 10, desc: 'en rodajas' },
+      { name: 'Judías verdes',      emoji: '🫘', min: 10, max: 12, desc: '' },
+    ]
+  },
+  {
+    id: 'meat', emoji: '🥩', name: 'Carnes y pescados',
+    note: 'por cada lado',
+    bg: 'linear-gradient(135deg, #ef4444, #7f1d1d)',
+    items: [
+      { name: 'Pechuga a la plancha', emoji: '🍗', min: 4,  max: 6,  desc: 'por lado, según grosor' },
+      { name: 'Filete de pescado',    emoji: '🐟', min: 2,  max: 3,  desc: 'por lado' },
+      { name: 'Legumbres (presión)',  emoji: '🫘', min: 20, max: 40, desc: 'según variedad y remojo' },
+    ]
+  },
+];
+
+// ── STATE ──
+let timers   = [];
+let timerId  = 0;
+let openFood = null;
+
+// ── HELPERS ──
+const $ = id => document.getElementById(id);
+
+function formatTime(secs) {
+  const m = Math.floor(secs / 60);
+  const s = (secs % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; }, 2200);
+  setTimeout(() => t.remove(), 2600);
+}
+
+// ── SOUND (Web Audio API) ──
+function playAlarm() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.45, 0.9].forEach(delay => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = 1047;
+      gain.gain.setValueAtTime(0.6, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.4);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.4);
+    });
+  } catch {}
+  try { navigator.vibrate && navigator.vibrate([300, 100, 300, 100, 600]); } catch {}
+}
+
+// ── TIMERS ──
+function startTimer(food, item, minutes) {
+  const id        = ++timerId;
+  const totalSecs = minutes * 60;
+  const timer = {
+    id,
+    name:       `${item.emoji} ${item.name}`,
+    foodName:   food.name,
+    desc:       item.desc,
+    totalSecs,
+    remaining:  totalSecs,
+    done:       false,
+    interval:   null,
+  };
+
+  timer.interval = setInterval(() => {
+    timer.remaining--;
+    if (timer.remaining <= 0) {
+      timer.remaining = 0;
+      timer.done = true;
+      clearInterval(timer.interval);
+      playAlarm();
+      updateTimerCard(timer);
+      setTimeout(() => removeTimer(timer.id), 8000);
+    } else {
+      updateTimerCard(timer);
+    }
+  }, 1000);
+
+  timers.push(timer);
+  renderTimers();
+  showToast(`⏱ ${item.name} — ${minutes} min`);
+  closeSheet();
+}
+
+function removeTimer(id) {
+  const t = timers.find(t => t.id === id);
+  if (t) { clearInterval(t.interval); }
+  timers = timers.filter(t => t.id !== id);
+  renderTimers();
+}
+
+function updateTimerCard(timer) {
+  const card = document.querySelector(`.timer-card[data-id="${timer.id}"]`);
+  if (!card) return;
+
+  const pct    = timer.remaining / timer.totalSecs;
+  const circ   = 125.66;
+  const offset = circ * (1 - pct);
+
+  card.querySelector('.tc-time').textContent    = formatTime(timer.remaining);
+  card.querySelector('.tc-progress').style.strokeDashoffset = offset;
+
+  if (timer.done) {
+    card.classList.add('done');
+    card.querySelector('.tc-name').textContent = `✓ ${timer.name}`;
+    card.querySelector('.tc-desc').textContent = 'Listo';
+  }
+}
+
+function renderTimers() {
+  const section = $('timers-section');
+  const list    = $('timers-list');
+
+  if (timers.length === 0) {
+    section.classList.remove('visible');
+    list.innerHTML = '';
+    return;
+  }
+
+  section.classList.add('visible');
+
+  // Add new cards (keep existing ones to preserve animation state)
+  timers.forEach(timer => {
+    if (document.querySelector(`.timer-card[data-id="${timer.id}"]`)) return;
+
+    const pct    = timer.remaining / timer.totalSecs;
+    const circ   = 125.66;
+    const offset = circ * (1 - pct);
+
+    const card = document.createElement('div');
+    card.className = 'timer-card';
+    card.dataset.id = timer.id;
+    card.innerHTML = `
+      <div class="tc-ring">
+        <svg viewBox="0 0 52 52">
+          <circle class="tc-bg"       cx="26" cy="26" r="20"/>
+          <circle class="tc-progress" cx="26" cy="26" r="20"
+            style="stroke-dashoffset:${offset}"/>
+        </svg>
+        <span class="tc-time">${formatTime(timer.remaining)}</span>
+      </div>
+      <div class="tc-info">
+        <div class="tc-name">${timer.name}</div>
+        <div class="tc-desc">${timer.desc || timer.foodName}</div>
+      </div>
+      <button class="tc-cancel" data-id="${timer.id}">✕</button>
+    `;
+    list.appendChild(card);
+  });
+
+  // Remove cards for deleted timers
+  list.querySelectorAll('.timer-card').forEach(card => {
+    if (!timers.find(t => t.id === +card.dataset.id)) card.remove();
+  });
+}
+
+// ── CATEGORIES ──
+function renderCategories() {
+  const grid = $('cat-grid');
+  grid.innerHTML = FOODS.map(f => `
+    <button class="cat-card" data-id="${f.id}">
+      <div class="cat-icon-wrap" style="background:${f.bg}">
+        <span class="cat-emoji">${f.emoji}</span>
+      </div>
+      <span class="cat-name">${f.name}</span>
+    </button>
+  `).join('');
+}
+
+// ── SHEET ──
+function openSheet(food) {
+  openFood = food;
+  $('sheet-emoji').textContent = food.emoji;
+  $('sheet-title').textContent = food.name;
+  $('sheet-note').textContent  = food.note;
+  $('sheet-items').innerHTML   = food.items.map(item => `
+    <div class="food-item">
+      <div class="fi-left">
+        <span class="fi-emoji">${item.emoji}</span>
+        <div class="fi-meta">
+          <div class="fi-name">${item.name}</div>
+          ${item.desc ? `<div class="fi-desc">${item.desc}</div>` : ''}
+        </div>
+      </div>
+      <div class="fi-times">
+        <button class="fi-btn" data-food="${food.id}" data-name="${item.name}" data-emoji="${item.emoji}" data-desc="${item.desc}" data-mins="${item.min}">
+          ${item.min} min
+        </button>
+        ${item.min !== item.max ? `
+        <button class="fi-btn" data-food="${food.id}" data-name="${item.name}" data-emoji="${item.emoji}" data-desc="${item.desc}" data-mins="${item.max}">
+          ${item.max} min
+        </button>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  $('sheet-overlay').classList.add('open');
+  requestAnimationFrame(() => $('sheet').classList.add('open'));
+}
+
+function closeSheet() {
+  $('sheet').classList.remove('open');
+  $('sheet-overlay').classList.remove('open');
+  openFood = null;
+}
+
+// ── EVENTS ──
+$('cat-grid').addEventListener('click', e => {
+  const btn = e.target.closest('.cat-card');
+  if (!btn) return;
+  const food = FOODS.find(f => f.id === btn.dataset.id);
+  if (food) openSheet(food);
+});
+
+$('sheet-overlay').addEventListener('click', closeSheet);
+
+$('sheet-items').addEventListener('click', e => {
+  const btn = e.target.closest('.fi-btn');
+  if (!btn) return;
+  const food = FOODS.find(f => f.id === btn.dataset.food);
+  if (!food) return;
+  const item = {
+    name:  btn.dataset.name,
+    emoji: btn.dataset.emoji,
+    desc:  btn.dataset.desc,
+  };
+  startTimer(food, item, +btn.dataset.mins);
+});
+
+$('timers-list').addEventListener('click', e => {
+  const btn = e.target.closest('.tc-cancel');
+  if (btn) removeTimer(+btn.dataset.id);
+});
+
+// ── SERVICE WORKER ──
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+
+// ── INIT ──
+renderCategories();
+</script>
+
+</body>
+</html>
