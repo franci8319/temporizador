@@ -4,8 +4,8 @@
   "description": "Temporizadores para cocinar con tiempos predefinidos",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#110d07",
-  "theme_color": "#110d07",
+  "background_color": "#1a4a8a",
+  "theme_color": "#1a4a8a",
   "orientation": "portrait-primary",
   "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }
