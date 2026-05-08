@@ -108,27 +108,27 @@
     /* Circular progress */
     .tc-ring {
       position: relative;
-      width: 52px;
-      height: 52px;
+      width: 86px;
+      height: 86px;
       flex-shrink: 0;
     }
 
     .tc-ring svg {
-      width: 52px;
-      height: 52px;
+      width: 86px;
+      height: 86px;
       transform: rotate(-90deg);
     }
 
     .tc-bg {
       fill: none;
       stroke: var(--surface3);
-      stroke-width: 4;
+      stroke-width: 5;
     }
 
     .tc-progress {
       fill: none;
       stroke: var(--accent);
-      stroke-width: 4;
+      stroke-width: 5;
       stroke-linecap: round;
       stroke-dasharray: 125.66;
       transition: stroke-dashoffset 0.5s linear, stroke 0.3s;
@@ -142,7 +142,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 11px;
+      font-size: 17px;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       color: var(--text);
@@ -783,9 +783,9 @@ function renderTimers() {
     card.dataset.id = timer.id;
     card.innerHTML = `
       <div class="tc-ring">
-        <svg viewBox="0 0 52 52">
-          <circle class="tc-bg"       cx="26" cy="26" r="20"/>
-          <circle class="tc-progress" cx="26" cy="26" r="20"
+        <svg viewBox="0 0 86 86">
+          <circle class="tc-bg"       cx="43" cy="43" r="20"/>
+          <circle class="tc-progress" cx="43" cy="43" r="20"
             style="stroke-dashoffset:${offset}"/>
         </svg>
         <span class="tc-time">${formatTime(timer.remaining)}</span>
