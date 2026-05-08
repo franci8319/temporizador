@@ -326,18 +326,26 @@
     .food-item:last-child { border-bottom: none; }
 
     .fi-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      grid-template-rows: auto auto;
+      column-gap: 10px;
+      row-gap: 2px;
       flex: 1;
       min-width: 0;
+      align-items: center;
     }
 
-    .fi-emoji { font-size: 30px; flex-shrink: 0; }
-
-    .fi-meta { min-width: 0; }
+    .fi-emoji {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      align-self: center;
+      font-size: 30px;
+    }
 
     .fi-name {
+      grid-column: 2;
+      grid-row: 1;
       font-size: 14px;
       font-weight: 700;
       white-space: nowrap;
@@ -346,9 +354,10 @@
     }
 
     .fi-desc {
+      grid-column: 2;
+      grid-row: 2;
       font-size: 11px;
       color: var(--sub);
-      margin-top: 2px;
     }
 
     .fi-times {
@@ -840,10 +849,8 @@ function openSheet(food) {
     <div class="food-item">
       <div class="fi-left">
         <span class="fi-emoji">${item.emoji}</span>
-        <div class="fi-meta">
-          <div class="fi-name">${item.name}</div>
-          ${item.desc ? `<div class="fi-desc">${item.desc}</div>` : ''}
-        </div>
+        <div class="fi-name">${item.name}</div>
+        ${item.desc ? `<div class="fi-desc">${item.desc}</div>` : '<div></div>'}
       </div>
       <div class="fi-times">
         <button class="fi-btn" data-food="${food.id}" data-name="${item.name}" data-emoji="${item.emoji}" data-desc="${item.desc}" data-mins="${item.min}">
