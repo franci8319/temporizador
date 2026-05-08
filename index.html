@@ -59,10 +59,10 @@
       letter-spacing: -0.3px;
     }
 
-    /* ── Active timers ── */
+    /* ── Active timer ── */
     #timers-section {
       flex-shrink: 0;
-      padding: 0 16px 8px;
+      padding: 0 16px 12px;
       display: none;
     }
 
@@ -74,63 +74,65 @@
       text-transform: uppercase;
       letter-spacing: 1.5px;
       color: var(--sub);
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       padding: 0 4px;
     }
 
     #timers-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      align-items: center;
     }
 
     .timer-card {
+      width: 100%;
       background: var(--surface);
-      border-radius: var(--r);
-      padding: 12px 14px;
+      border-radius: 24px;
+      padding: 20px 20px 18px;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 12px;
-      border-left: 3px solid var(--accent);
-      transition: opacity 0.3s;
+      gap: 14px;
+      border-top: 4px solid var(--accent);
+      transition: border-color 0.3s;
     }
 
     .timer-card.done {
-      border-left-color: #4caf50;
+      border-top-color: #4caf50;
       animation: pulse-green 0.6s ease 3;
     }
 
     @keyframes pulse-green {
       0%, 100% { background: var(--surface); }
-      50%       { background: #1a3020; }
+      50%       { background: #0f2d1a; }
     }
 
     /* Circular progress */
     .tc-ring {
       position: relative;
-      width: 86px;
-      height: 86px;
+      width: min(56vw, 220px);
+      height: min(56vw, 220px);
       flex-shrink: 0;
     }
 
     .tc-ring svg {
-      width: 86px;
-      height: 86px;
+      width: 100%;
+      height: 100%;
       transform: rotate(-90deg);
     }
 
     .tc-bg {
       fill: none;
       stroke: var(--surface3);
-      stroke-width: 5;
+      stroke-width: 12;
     }
 
     .tc-progress {
       fill: none;
       stroke: var(--accent);
-      stroke-width: 5;
+      stroke-width: 12;
       stroke-linecap: round;
-      stroke-dasharray: 125.66;
+      stroke-dasharray: 691.15;
       transition: stroke-dashoffset 0.5s linear, stroke 0.3s;
     }
 
@@ -142,46 +144,44 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 17px;
+      font-size: clamp(36px, 10vw, 54px);
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       color: var(--text);
+      letter-spacing: -1px;
     }
 
-    .tc-info { flex: 1; min-width: 0; }
+    .tc-info { text-align: center; }
 
     .tc-name {
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 700;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .tc-desc {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--sub);
-      margin-top: 2px;
+      margin-top: 3px;
     }
 
     .tc-cancel {
       background: var(--surface2);
       border: none;
       color: var(--sub);
-      width: 30px;
-      height: 30px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
       transition: background 0.15s, color 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
 
-    .tc-cancel:hover { background: var(--surface3); color: var(--accent); }
+    .tc-cancel:hover  { background: var(--surface3); color: var(--accent); }
+    .tc-cancel:active { background: var(--accent); color: #fff; }
 
     /* ── Categories ── */
     #categories-section {
@@ -700,6 +700,10 @@ function playAlarm() {
 
 // ── TIMERS ──
 function startTimer(food, item, minutes) {
+  // Un solo temporizador — cancela el anterior si existe
+  timers.forEach(t => clearInterval(t.interval));
+  timers = [];
+
   const id        = ++timerId;
   const totalSecs = minutes * 60;
   const timer = {
@@ -745,7 +749,7 @@ function updateTimerCard(timer) {
   if (!card) return;
 
   const pct    = timer.remaining / timer.totalSecs;
-  const circ   = 125.66;
+  const circ   = 691.15;
   const offset = circ * (1 - pct);
 
   card.querySelector('.tc-time').textContent    = formatTime(timer.remaining);
@@ -775,7 +779,7 @@ function renderTimers() {
     if (document.querySelector(`.timer-card[data-id="${timer.id}"]`)) return;
 
     const pct    = timer.remaining / timer.totalSecs;
-    const circ   = 125.66;
+    const circ   = 691.15;
     const offset = circ * (1 - pct);
 
     const card = document.createElement('div');
@@ -783,9 +787,9 @@ function renderTimers() {
     card.dataset.id = timer.id;
     card.innerHTML = `
       <div class="tc-ring">
-        <svg viewBox="0 0 86 86">
-          <circle class="tc-bg"       cx="43" cy="43" r="20"/>
-          <circle class="tc-progress" cx="43" cy="43" r="20"
+        <svg viewBox="0 0 240 240">
+          <circle class="tc-bg"       cx="120" cy="120" r="110"/>
+          <circle class="tc-progress" cx="120" cy="120" r="110"
             style="stroke-dashoffset:${offset}"/>
         </svg>
         <span class="tc-time">${formatTime(timer.remaining)}</span>
@@ -945,7 +949,10 @@ $('btn-start-custom').addEventListener('click', () => {
   const food = { name: 'Personalizado' };
   const item = { name: label, emoji: '⏱', desc: 'temporizador personalizado' };
   const mins = totalSecs / 60;
-  // start directly with total seconds
+  // Un solo temporizador — cancela el anterior si existe
+  timers.forEach(t => clearInterval(t.interval));
+  timers = [];
+
   const id = ++timerId;
   const timer = {
     id, name: `⏱ ${label}`, foodName: 'Personalizado',
