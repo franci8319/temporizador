@@ -45,18 +45,24 @@
     #header {
       flex-shrink: 0;
       padding: 18px 20px 10px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      position: relative;
     }
 
-    #header svg { width: 28px; height: 28px; flex-shrink: 0; }
+    #header svg {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+    }
 
     #header h1 {
       font-size: 20px;
       font-weight: 800;
       color: var(--text);
       letter-spacing: -0.3px;
+      padding: 0 4px;
     }
 
     /* ── Active timer ── */
@@ -514,6 +520,18 @@
 
     #btn-start-custom:active { opacity: 0.8; transform: scale(0.97); }
 
+    /* ── Screen notice ── */
+    #screen-notice {
+      display: none;
+      font-size: 11px;
+      color: var(--sub);
+      text-align: center;
+      padding: 2px 4px 6px;
+      letter-spacing: 0.3px;
+    }
+
+    #screen-notice.visible { display: block; }
+
     /* ── Tip section ── */
     #tip-box {
       flex-shrink: 0;
@@ -551,6 +569,7 @@
   <div id="timers-section">
     <div id="timers-label">En marcha</div>
     <div id="timers-list"></div>
+    <div id="screen-notice"></div>
   </div>
 
   <!-- Categories -->
@@ -743,6 +762,7 @@ function startTimer(food, item, minutes) {
 
   timers.push(timer);
   renderTimers();
+  requestWakeLock();
   showToast(`⏱ ${item.name} — ${minutes} min`);
   closeSheet();
 }
@@ -751,6 +771,7 @@ function removeTimer(id) {
   const t = timers.find(t => t.id === id);
   if (t) { clearInterval(t.interval); }
   timers = timers.filter(t => t.id !== id);
+  if (timers.length === 0) releaseWakeLock();
   renderTimers();
 }
 
@@ -981,6 +1002,7 @@ $('btn-start-custom').addEventListener('click', () => {
   }, 500);
   timers.push(timer);
   renderTimers();
+  requestWakeLock();
   showToast(`⏱ ${label}`);
   closeCustomSheet();
 });
@@ -993,8 +1015,33 @@ $('cat-grid').addEventListener('click', e => {
   if (food) openSheet(food);
 });
 
+// ── WAKE LOCK ──
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) { showScreenNotice(false); return; }
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+    showScreenNotice(true);
+  } catch { showScreenNotice(false); }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+  const n = $('screen-notice');
+  n.classList.remove('visible');
+}
+
+function showScreenNotice(active) {
+  const n = $('screen-notice');
+  n.textContent = active ? '🔆 Pantalla activa' : '⚠ Mantén la pantalla encendida';
+  n.classList.add('visible');
+}
+
 // ── VISIBILITYCHANGE: corrige el tiempo al volver con la pantalla apagada ──
 document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && timers.some(t => !t.done)) requestWakeLock();
   if (document.hidden) return;
   timers.forEach(timer => {
     if (timer.done) return;
