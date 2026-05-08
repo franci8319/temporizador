@@ -717,8 +717,9 @@ function startTimer(food, item, minutes) {
     interval:   null,
   };
 
+  timer.endsAt = Date.now() + totalSecs * 1000;
   timer.interval = setInterval(() => {
-    timer.remaining--;
+    timer.remaining = Math.max(0, Math.round((timer.endsAt - Date.now()) / 1000));
     if (timer.remaining <= 0) {
       timer.remaining = 0;
       timer.done = true;
@@ -729,7 +730,7 @@ function startTimer(food, item, minutes) {
     } else {
       updateTimerCard(timer);
     }
-  }, 1000);
+  }, 500);
 
   timers.push(timer);
   renderTimers();
@@ -959,8 +960,9 @@ $('btn-start-custom').addEventListener('click', () => {
     desc: 'temporizador personalizado',
     totalSecs, remaining: totalSecs, done: false, interval: null,
   };
+  timer.endsAt = Date.now() + totalSecs * 1000;
   timer.interval = setInterval(() => {
-    timer.remaining--;
+    timer.remaining = Math.max(0, Math.round((timer.endsAt - Date.now()) / 1000));
     if (timer.remaining <= 0) {
       timer.remaining = 0; timer.done = true;
       clearInterval(timer.interval);
@@ -969,7 +971,7 @@ $('btn-start-custom').addEventListener('click', () => {
     } else {
       updateTimerCard(timer);
     }
-  }, 1000);
+  }, 500);
   timers.push(timer);
   renderTimers();
   showToast(`⏱ ${label}`);
@@ -982,6 +984,26 @@ $('cat-grid').addEventListener('click', e => {
   if (!btn || btn.id === 'btn-open-custom') return;
   const food = FOODS.find(f => f.id === btn.dataset.id);
   if (food) openSheet(food);
+});
+
+// ── VISIBILITYCHANGE: corrige el tiempo al volver con la pantalla apagada ──
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  timers.forEach(timer => {
+    if (timer.done) return;
+    timer.remaining = Math.max(0, Math.round((timer.endsAt - Date.now()) / 1000));
+    if (timer.remaining <= 0) {
+      timer.remaining = 0;
+      timer.done = true;
+      clearInterval(timer.interval);
+      playAlarm();
+      renderTimers();
+      updateTimerCard(timer);
+      setTimeout(() => removeTimer(timer.id), 8000);
+    } else {
+      updateTimerCard(timer);
+    }
+  });
 });
 
 // ── SERVICE WORKER ──
