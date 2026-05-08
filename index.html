@@ -397,6 +397,114 @@
       to   { opacity:1; transform:translateX(-50%) translateY(0); }
     }
 
+    /* ── Custom timer sheet ── */
+    #custom-sheet {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-radius: 24px 24px 0 0;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+      z-index: 51;
+    }
+
+    #custom-sheet.open { transform: translateY(0); }
+
+    #custom-header {
+      flex-shrink: 0;
+      padding: 16px 20px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--surface2);
+    }
+
+    #custom-header span { font-size: 32px; }
+    #custom-title { font-size: 18px; font-weight: 800; }
+
+    #custom-body {
+      padding: 28px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .time-picker {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tp-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tp-btn {
+      width: 52px; height: 52px;
+      background: var(--surface2);
+      border: none; border-radius: 50%;
+      color: var(--text);
+      font-size: 26px; font-weight: 300;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .tp-btn:active { background: var(--accent); transform: scale(0.9); }
+
+    .tp-display {
+      font-size: 58px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      width: 110px;
+      text-align: center;
+      background: var(--surface2);
+      border-radius: 18px;
+      padding: 10px 0;
+      line-height: 1;
+    }
+
+    .tp-label {
+      font-size: 12px;
+      color: var(--sub);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .tp-sep {
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--sub);
+      padding-bottom: 28px;
+    }
+
+    #btn-start-custom {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: 16px;
+      padding: 16px;
+      color: #fff;
+      font-size: 17px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #btn-start-custom:active { opacity: 0.8; transform: scale(0.97); }
+
     /* ── Tip section ── */
     #tip-box {
       flex-shrink: 0;
@@ -451,6 +559,33 @@
 
 <!-- Sheet overlay -->
 <div id="sheet-overlay"></div>
+
+<!-- Custom timer sheet -->
+<div id="custom-sheet">
+  <div id="sheet-handle" style="margin:12px auto 0;width:36px;height:4px;background:var(--surface3);border-radius:2px;"></div>
+  <div id="custom-header">
+    <span>⏱</span>
+    <div id="custom-title">Temporizador personalizado</div>
+  </div>
+  <div id="custom-body">
+    <div class="time-picker">
+      <div class="tp-unit">
+        <button class="tp-btn" id="mins-up">+</button>
+        <div class="tp-display" id="mins-display">05</div>
+        <button class="tp-btn" id="mins-down">−</button>
+        <div class="tp-label">min</div>
+      </div>
+      <div class="tp-sep">:</div>
+      <div class="tp-unit">
+        <button class="tp-btn" id="secs-up">+</button>
+        <div class="tp-display" id="secs-display">00</div>
+        <button class="tp-btn" id="secs-down">−</button>
+        <div class="tp-label">seg</div>
+      </div>
+    </div>
+    <button id="btn-start-custom">Iniciar</button>
+  </div>
+</div>
 <div id="sheet">
   <div id="sheet-handle"></div>
   <div id="sheet-header">
@@ -680,7 +815,14 @@ function renderCategories() {
       </div>
       <span class="cat-name">${f.name}</span>
     </button>
-  `).join('');
+  `).join('') + `
+    <button class="cat-card" id="btn-open-custom">
+      <div class="cat-icon-wrap" style="background:linear-gradient(135deg,#6366f1,#1e1b4b)">
+        <span class="cat-emoji">⏱</span>
+      </div>
+      <span class="cat-name">Personalizado</span>
+    </button>
+  `;
 }
 
 // ── SHEET ──
@@ -721,12 +863,6 @@ function closeSheet() {
 }
 
 // ── EVENTS ──
-$('cat-grid').addEventListener('click', e => {
-  const btn = e.target.closest('.cat-card');
-  if (!btn) return;
-  const food = FOODS.find(f => f.id === btn.dataset.id);
-  if (food) openSheet(food);
-});
 
 $('sheet-overlay').addEventListener('click', closeSheet);
 
@@ -746,6 +882,99 @@ $('sheet-items').addEventListener('click', e => {
 $('timers-list').addEventListener('click', e => {
   const btn = e.target.closest('.tc-cancel');
   if (btn) removeTimer(+btn.dataset.id);
+});
+
+// ── CUSTOM TIMER ──
+let customMins = 5;
+let customSecs = 0;
+
+function updateCustomDisplay() {
+  $('mins-display').textContent = customMins.toString().padStart(2, '0');
+  $('secs-display').textContent = customSecs.toString().padStart(2, '0');
+}
+
+function openCustomSheet() {
+  $('sheet-overlay').classList.add('open');
+  requestAnimationFrame(() => $('custom-sheet').classList.add('open'));
+}
+
+function closeCustomSheet() {
+  $('custom-sheet').classList.remove('open');
+  $('sheet-overlay').classList.remove('open');
+}
+
+// Hold-to-repeat logic
+let holdInterval = null;
+function startHold(fn) {
+  fn();
+  holdInterval = setInterval(fn, 120);
+}
+function stopHold() {
+  clearInterval(holdInterval);
+  holdInterval = null;
+}
+
+function bindHold(id, fn) {
+  const el = $(id);
+  el.addEventListener('mousedown',  () => startHold(fn));
+  el.addEventListener('touchstart', (e) => { e.preventDefault(); startHold(fn); }, { passive: false });
+  el.addEventListener('mouseup',   stopHold);
+  el.addEventListener('mouseleave', stopHold);
+  el.addEventListener('touchend',  stopHold);
+}
+
+bindHold('mins-up',   () => { customMins = Math.min(99, customMins + 1); updateCustomDisplay(); });
+bindHold('mins-down', () => { customMins = Math.max(0,  customMins - 1); updateCustomDisplay(); });
+bindHold('secs-up',   () => {
+  customSecs++;
+  if (customSecs >= 60) { customSecs = 0; customMins = Math.min(99, customMins + 1); }
+  updateCustomDisplay();
+});
+bindHold('secs-down', () => {
+  customSecs--;
+  if (customSecs < 0) { customSecs = 59; customMins = Math.max(0, customMins - 1); }
+  updateCustomDisplay();
+});
+
+$('btn-start-custom').addEventListener('click', () => {
+  const totalSecs = customMins * 60 + customSecs;
+  if (totalSecs === 0) return;
+  const label = customMins > 0 && customSecs > 0
+    ? `${customMins}m ${customSecs}s`
+    : customMins > 0 ? `${customMins} min` : `${customSecs} seg`;
+  const food = { name: 'Personalizado' };
+  const item = { name: label, emoji: '⏱', desc: 'temporizador personalizado' };
+  const mins = totalSecs / 60;
+  // start directly with total seconds
+  const id = ++timerId;
+  const timer = {
+    id, name: `⏱ ${label}`, foodName: 'Personalizado',
+    desc: 'temporizador personalizado',
+    totalSecs, remaining: totalSecs, done: false, interval: null,
+  };
+  timer.interval = setInterval(() => {
+    timer.remaining--;
+    if (timer.remaining <= 0) {
+      timer.remaining = 0; timer.done = true;
+      clearInterval(timer.interval);
+      playAlarm(); updateTimerCard(timer);
+      setTimeout(() => removeTimer(timer.id), 8000);
+    } else {
+      updateTimerCard(timer);
+    }
+  }, 1000);
+  timers.push(timer);
+  renderTimers();
+  showToast(`⏱ ${label}`);
+  closeCustomSheet();
+});
+
+$('cat-grid').addEventListener('click', e => {
+  if (e.target.closest('#btn-open-custom')) { openCustomSheet(); return; }
+  const btn = e.target.closest('.cat-card');
+  if (!btn || btn.id === 'btn-open-custom') return;
+  const food = FOODS.find(f => f.id === btn.dataset.id);
+  if (food) openSheet(food);
 });
 
 // ── SERVICE WORKER ──
